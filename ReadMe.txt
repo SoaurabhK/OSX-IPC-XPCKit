@@ -14,7 +14,7 @@ Version 1.0
 ===========================================================================
 Copyright (C) 2012 Apple Inc. All rights reserved.
 
-OSX - Supports 10.8 and later
+OSX - Supports 10.7 and later
 
 Refernces -
 https://github.com/stevestreza/XPCKit/

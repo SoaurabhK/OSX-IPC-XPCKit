@@ -94,17 +94,59 @@
 
 #include <Foundation/Foundation.h>
 #import "TicketAgent.h"
+#import <xpc/xpc.h>
+#import "XPCKit.h"
 
 int main(int argc, const char *argv[])
 {
     // An XPCService should use this singleton instance of serviceListener. It is preconfigured to listen on the name advertised by this XPCService's Info.plist.
-    NSXPCListener *listener = [NSXPCListener serviceListener];
     
-    // Create the delegate of the listener.
-    TicketAgent *ticketAgent = [TicketAgent new];
-    listener.delegate = ticketAgent;
+    [XPCService runServiceWithConnectionHandler:^(XPCConnection *connection){
+        
+        [connection setEventHandler:^(NSDictionary *message, XPCConnection *connection){
+            
+            NSString *methodName = [message objectForKey:@"operation"];
+            
+            //if operation's value is empty or nil
+            if (!methodName.length) {
+                //Return a failure with returnCode -1
+                [connection sendMessage:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt: -1] forKey:@"returnCode"]];
+                return;
+            }
+            
+            TicketAgent *ticketAgent = [TicketAgent new];
+            
+            //if method's signature is in-valid
+            NSMethodSignature *signature  = [ticketAgent methodSignatureForSelector:NSSelectorFromString(methodName)];
+            if (!signature) {
+                [connection sendMessage:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt: -1] forKey:@"returnCode"]];
+                return;
+            }
+            
+            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+            
+            [invocation setTarget:ticketAgent];
+            [invocation setSelector:NSSelectorFromString(methodName)]; 
+            
+            NSArray *args = [message objectForKey:@"args"];
+            
+            if (args.count) {
+                for (int i = 0; i < args.count; i++ ){
+                    id object = [args objectAtIndex:i];
+                    [invocation setArgument:&object atIndex:i+2];
+                }
+            }
+            
+            [invocation invoke];
+            
+            void *resultData;
+            [invocation getReturnValue:&resultData];
+            NSDictionary *resData = (__bridge NSDictionary *)resultData;
+            
+            [connection sendMessage:resData];
+           
+        }];
+    }];
     
-    // Calling resume on the serviceListener does not return. It will wait for incoming connections using CFRunLoop or a dispatch queue, as appropriate.
-    [listener resume];
-	return 0;
+    return 0;
 }

@@ -93,9 +93,9 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "Interfaces.h"
 
+@interface TicketAgent : NSObject
 
-@interface TicketAgent : NSObject <NSXPCListenerDelegate, Agent>
-
+//Input and output types for this method should be primitive objets
+- (NSDictionary*)buyTicket:(NSString *)destination onDate:(NSDate *)date withMaxCost:(NSNumber*)maxCost;
 @end

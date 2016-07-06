@@ -93,6 +93,7 @@
  */
 
 #import <Cocoa/Cocoa.h>
+#import <XPCKit/XPCKit.h>
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 
@@ -100,6 +101,8 @@
 @property (assign) IBOutlet NSDatePicker *datePicker;
 @property (assign) IBOutlet NSTextField *destination;
 @property (assign) IBOutlet NSSlider *price;
+
+@property (readonly) XPCConnection *mathConnection;
 
 @property (assign) IBOutlet NSTextField *ticketInfo;
 

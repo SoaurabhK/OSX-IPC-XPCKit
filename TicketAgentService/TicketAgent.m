@@ -96,37 +96,16 @@
 
 @implementation TicketAgent
 
-- (BOOL)listener:(NSXPCListener *)listener shouldAcceptNewConnection:(NSXPCConnection *)newConnection {
-    // This method will be called by the NSXPCListener. It gives the delegate an opportunity to configure and accept (or reject) a new incoming connection.
+- (NSDictionary*)buyTicket:(NSString *)destination onDate:(NSDate *)date withMaxCost:(NSNumber*)maxCost {
     
-    // The connection is created, but unconfigured and suspended. We will finish configuring it here, resume it, and return YES.
-    newConnection.exportedInterface = [NSXPCInterface interfaceWithProtocol:@protocol(Agent)];
-    
-    // This object instance is both the delegate and the singleton implementation of the Agent protocol. Another common pattern may be to create a new object to serve as the exportedObject for each new connection.
-    newConnection.exportedObject = self;
-    
-    // Allow messages to be received.
-    [newConnection resume];
-    
-    return YES;
-}
-
-- (void)buyTicket:(NSString *)destination onDate:(NSDate *)date withMaxCost:(NSUInteger)maxCost reply:(void (^)(Ticket *))reply {
-    Ticket *ticket = nil;
-    
-    if (maxCost > 100) {
+    NSUInteger price = 0;
+    NSUInteger mCost = maxCost.intValue;
+    if (mCost > 100) {
         // Let's build a ticket.
-        ticket = [Ticket new];
-        ticket.date = date;
-        ticket.destination = destination;
-        ticket.price = (random() % maxCost);        
+        price = (random() % mCost);
     }
     
-    // Pretend that calculating ticket prices is hard work.
-    sleep(1);
-    
-    // nil is a valid return value.
-    reply(ticket);
+    return [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt: 0], @"returnCode", [NSNumber numberWithUnsignedInteger:price], @"resultData", nil];
 }
 
 @end

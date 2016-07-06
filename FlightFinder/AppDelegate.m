@@ -93,11 +93,11 @@
  */
 
 #import "AppDelegate.h"
-#import "Interfaces.h"
 
-@implementation AppDelegate {
-    id <Agent> _agent;
-}
+#import <xpc/xpc.h>
+#import <dispatch/dispatch.h>
+
+@implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
@@ -105,37 +105,49 @@
     [_datePicker setDateValue:[NSDate date]];
     
     // Set up our connection to the service. This won't actually send any messages yet.
-    NSXPCConnection *connection = [[NSXPCConnection alloc] initWithServiceName:@"com.apple.TicketAgentService"];
-    connection.remoteObjectInterface = [NSXPCInterface interfaceWithProtocol:@protocol(Agent)];
-    [connection resume];
     
-    // Get a proxy object from the connection. This object implements the Agent protocol and calls the supplied error handling block if something goes wrong when a message with a reply is sent.
-    _agent = [connection remoteObjectProxyWithErrorHandler:^(NSError *err) {
-        // Since we're updating the UI, we must do this work on the main thread
-        [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-            [_ticketInfo setStringValue:[NSString stringWithFormat:@"There was an error: %@", err]];
-        }];
-    }];
+    _mathConnection = [[XPCConnection alloc] initWithServiceName:@"com.apple.TicketAgentService"];
+    
 }
 
 - (IBAction)searchFlights:(id)sender {
     [_ticketInfo setStringValue:@"Searching..."];
     
-    // Search for a flight
-    [_agent buyTicket:[_destination stringValue]
-               onDate:[_datePicker dateValue]
-          withMaxCost:[_price integerValue]
-                reply:^(Ticket *tk) {
-        // This block is executed when we receive a reply. It runs on a per-connection serial queue (not the main thread or the thread which sent the message). Since we're updating the UI, we must do this work on the main thread.
+    NSDictionary *multiplyData =
+    [NSDictionary dictionaryWithObjectsAndKeys:
+     @"buyTicket:onDate:withMaxCost:", @"operation",
+     [NSArray arrayWithObjects:
+      [_destination stringValue],
+      [_datePicker dateValue],
+      [NSNumber numberWithInteger:[_price integerValue]],
+      nil], @"args",
+     nil];
+    
+    [_mathConnection sendMessage:multiplyData];
+    
+    //setting weakSelf so that it does not lead to a retain cycle in block
+    __weak typeof(self) weakSelf = self;
+    
+    _mathConnection.eventHandler = ^(NSDictionary *message, XPCConnection *inConnection){
+        
+        NSNumber *retCode = [message objectForKey:@"returnCode"];
+        NSString *ticInfo = @"";
+        if (retCode.intValue == 0) {
+            
+            NSNumber *resPrice = [message objectForKey:@"resultData"];
+            ticInfo = [NSString stringWithFormat:@"Ticket found! Price: $%ld", resPrice.longValue];
+            
+        }else {
+            ticInfo = @"No ticket found.";
+        }
+
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-            if (tk) {
-                NSString *ticketInfo = [NSString stringWithFormat:@"Ticket found! Price: $%ld", [tk price]];
-                [_ticketInfo setStringValue:ticketInfo];
-            } else {
-                [_ticketInfo setStringValue:@"No ticket found."];
-            }
+            [weakSelf.ticketInfo setStringValue:ticInfo];
         }];
-    }];
+        
+        
+    };
+
 }
 
 - (IBAction)getSpecialFlight:(id)sender {

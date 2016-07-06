@@ -99,8 +99,6 @@
 
 int main(int argc, const char *argv[])
 {
-    // An XPCService should use this singleton instance of serviceListener. It is preconfigured to listen on the name advertised by this XPCService's Info.plist.
-    
     [XPCService runServiceWithConnectionHandler:^(XPCConnection *connection){
         
         [connection setEventHandler:^(NSDictionary *message, XPCConnection *connection){
